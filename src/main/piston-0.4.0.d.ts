@@ -27,7 +27,7 @@ declare namespace ps {
         destroyed: boolean;
         isWrapping: boolean;
         radius: number;
-        private engine;
+        engine: Engine;
         constructor(pos: Point);
         update(dt: number, dims: Vector): void;
         private wrap(dimensions);
