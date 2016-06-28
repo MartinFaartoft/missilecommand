@@ -8,15 +8,13 @@ namespace mc {
             super(pos);
             this.vel = new ps.Vector(target.x - pos.x, target.y - pos.y).unit().multiply(speed);
             this.radius = 5;
-
             this.initialPos = pos;
-
             this.isCollisionDetectionEnabled = true;
         }
 
         render(camera: ps.Camera): void {
             camera.drawLine(this.initialPos, this.pos, 1, this.color);
-            camera.fillCircle(this, this.radius, this.color);
+            camera.fillCircle(this.pos, this.radius, this.color);
         }
 
         update(dt: number, dims: ps.Vector) {
@@ -24,7 +22,6 @@ namespace mc {
 
             if (this.passedTarget()) {
                 this.destroyed = true;
-                console.log("boom");
             }
         }
 
@@ -39,7 +36,7 @@ namespace mc {
         }
 
         collideWith(other: ps.Entity) {
-            if (other.vel.y * this.vel.y < 0) { //going in different directions
+            if (other.vel.y === 0) {
                 this.destroyed = true;
             }
         }

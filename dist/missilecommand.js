@@ -19,13 +19,12 @@ var mc;
         }
         Missile.prototype.render = function (camera) {
             camera.drawLine(this.initialPos, this.pos, 1, this.color);
-            camera.fillCircle(this, this.radius, this.color);
+            camera.fillCircle(this.pos, this.radius, this.color);
         };
         Missile.prototype.update = function (dt, dims) {
             _super.prototype.update.call(this, dt, dims);
             if (this.passedTarget()) {
                 this.destroyed = true;
-                console.log("boom");
             }
         };
         Missile.prototype.passedTarget = function () {
@@ -36,7 +35,7 @@ var mc;
             return this.pos.y > this.target.y;
         };
         Missile.prototype.collideWith = function (other) {
-            if (other.vel.y * this.vel.y < 0) {
+            if (other.vel.y === 0) {
                 this.destroyed = true;
             }
         };
@@ -45,30 +44,67 @@ var mc;
     mc.Missile = Missile;
 })(mc || (mc = {}));
 /// <reference path="piston-0.4.0.d.ts" />
-/// <reference path="missile.ts" />
 var mc;
 (function (mc) {
-    var Shooter = (function (_super) {
-        __extends(Shooter, _super);
-        function Shooter() {
-            _super.call(this, new ps.Point(0, 0));
+    var FlakExplosion = (function (_super) {
+        __extends(FlakExplosion, _super);
+        function FlakExplosion(pos) {
+            _super.call(this, pos);
+            this.radius = 30;
+            this.isCollisionDetectionEnabled = true;
+            this.destroyOnCollision = true;
         }
-        Shooter.prototype.update = function (dt, dims) {
-            if (this.engine.mouse.isLeftButtonDown) {
-                this.engine.registerEntity(this.shoot(new ps.Point(dims.x / 2, 0), this.engine.mouse.pos));
+        FlakExplosion.prototype.render = function (camera) {
+            camera.fillCircle(this.pos, this.radius, "orange");
+        };
+        return FlakExplosion;
+    }(ps.Entity));
+    mc.FlakExplosion = FlakExplosion;
+})(mc || (mc = {}));
+/// <reference path="piston-0.4.0.d.ts" />
+/// <reference path="flakexplosion.ts" />
+var mc;
+(function (mc) {
+    var Flak = (function (_super) {
+        __extends(Flak, _super);
+        function Flak(pos, target) {
+            _super.call(this, pos);
+            this.target = target;
+            this.color = "yellow";
+            this.speed = 150;
+            this.vel = new ps.Vector(target.x - pos.x, target.y - pos.y).unit().multiply(this.speed);
+            this.radius = 5;
+            this.isCollisionDetectionEnabled = false;
+            this.lengthFactor = 15 / this.speed;
+        }
+        Flak.prototype.render = function (camera) {
+            var tracer = this.pos.subtract(this.vel.multiply(this.lengthFactor));
+            camera.drawLine(tracer, this.pos, 1, this.color);
+        };
+        Flak.prototype.update = function (dt, dims) {
+            _super.prototype.update.call(this, dt, dims);
+            if (this.passedTarget()) {
+                this.destroyed = true;
+                this.spawnExplosion();
             }
         };
-        Shooter.prototype.render = function () { };
-        Shooter.prototype.shoot = function (pos, target) {
-            return new mc.Missile(pos, target, 30, "green");
+        Flak.prototype.passedTarget = function () {
+            var goingDown = this.vel.y < 0;
+            if (goingDown) {
+                return this.pos.y < this.target.y;
+            }
+            return this.pos.y > this.target.y;
         };
-        return Shooter;
+        Flak.prototype.spawnExplosion = function () {
+            this.engine.registerEntity(new mc.FlakExplosion(this.pos));
+        };
+        return Flak;
     }(ps.Entity));
-    mc.Shooter = Shooter;
+    mc.Flak = Flak;
 })(mc || (mc = {}));
 /// <reference path="piston-0.4.0.d.ts" />
 /// <reference path="missile.ts" />
-/// <reference path="shooter.ts" />
+/// <reference path="flak.ts" />
 var mc;
 (function (mc) {
     var dims = new ps.Vector(500, 500);
@@ -79,20 +115,23 @@ var mc;
     document.body.appendChild(canvas);
     var engine = new ps.Engine(dims, canvas);
     engine.mouse.setCustomCursor("assets/crosshair.png", new ps.Point(10, 10));
-    var missile = new mc.Missile(new ps.Point(50, dims.y), new ps.Point(200, 0), 30, "orange");
-    function shoot(e) {
-        console.log(e);
-        if (e.button === 0) {
-            console.log("pew");
+    // make left mouse button shoot flak
+    engine.mouse.addMouseDownEventListener(function (pos, button) {
+        if (button === 0) {
+            engine.registerEntity(shoot(new ps.Point(dims.x / 2, 0), pos));
         }
-    }
+    });
+    // create incoming missiles
     setInterval(addMissile, 1000); //todo find a way to turn it off
-    engine.registerEntity(missile);
+    // start the game
     engine.start();
+    function shoot(pos, target) {
+        return new mc.Flak(pos, target);
+    }
     function addMissile() {
         var speed = Math.floor(Math.random() * 10 + 30);
         var missile = createMissile(Math.random() * dims.x, Math.random() * dims.x, speed);
-        engine.registerEntity(missile, new mc.Shooter());
+        engine.registerEntity(missile);
     }
     function createMissile(initial_x, target_x, speed) {
         return new mc.Missile(new ps.Point(initial_x, dims.y), new ps.Point(target_x, 0), speed, "red");

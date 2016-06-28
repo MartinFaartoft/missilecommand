@@ -39,6 +39,7 @@ var ps;
             this.rotation = 0;
             this.rotationSpeed = 0;
             this.isCollisionDetectionEnabled = false;
+            this.destroyOnCollision = false;
             this.isAccelerationEnabled = false;
             this.mass = 100;
             this.destroyed = false;
@@ -74,7 +75,11 @@ var ps;
                 this.pos.y -= dimensions.y;
             }
         };
-        Entity.prototype.collideWith = function (other) { };
+        Entity.prototype.collideWith = function (other) {
+            if (this.destroyOnCollision) {
+                this.destroyed = true;
+            }
+        };
         return Entity;
     }());
     ps.Entity = Entity;
@@ -177,6 +182,9 @@ var ps;
         Point.prototype.distanceTo = function (p) {
             return Math.sqrt(Math.pow(this.x - p.x, 2) + Math.pow(this.y - p.y, 2));
         };
+        Point.prototype.vectorTo = function (p) {
+            return p.subtract(this).toVector();
+        };
         Point.prototype.toVector = function () {
             return new ps.Vector(this.x, this.y);
         };
@@ -254,6 +262,9 @@ var ps;
                 this.isLeftButtonDown = false;
                 this.isRightButtonDown = false;
                 this.isMiddleButtonDown = false;
+                this.mouseMoveListeners = [];
+                this.mouseDownListeners = [];
+                this.mouseUpListeners = [];
                 this.mouseMoveDelegate = this.onMouseMove.bind(this);
                 this.mouseDownDelegate = this.onMouseDown.bind(this);
                 this.mouseUpDelegate = this.onMouseUp.bind(this);
@@ -277,9 +288,19 @@ var ps;
             Mouse.prototype.setCustomCursor = function (url, hotspot) {
                 this.canvas.style.cursor = "url(" + url + ") " + hotspot.x + " " + hotspot.y + ", auto";
             };
+            Mouse.prototype.addMouseMoveEventListener = function (action) {
+                this.mouseMoveListeners.push(action);
+            };
             Mouse.prototype.onMouseMove = function (e) {
                 var newPos = new ps.Point(e.clientX, e.clientY);
                 this.pos = this.coordConverter.toGameCoords(newPos.subtract(this.findPos(this.canvas)));
+                for (var _i = 0, _a = this.mouseMoveListeners; _i < _a.length; _i++) {
+                    var listener = _a[_i];
+                    listener(this.pos);
+                }
+            };
+            Mouse.prototype.addMouseDownEventListener = function (action) {
+                this.mouseDownListeners.push(action);
             };
             Mouse.prototype.onMouseDown = function (e) {
                 e.stopImmediatePropagation();
@@ -292,6 +313,13 @@ var ps;
                 else if (e.button === 2) {
                     this.isMiddleButtonDown = true;
                 }
+                for (var _i = 0, _a = this.mouseDownListeners; _i < _a.length; _i++) {
+                    var listener = _a[_i];
+                    listener(this.pos, e.button);
+                }
+            };
+            Mouse.prototype.addMouseUpEventListener = function (action) {
+                this.mouseUpListeners.push(action);
             };
             Mouse.prototype.onMouseUp = function (e) {
                 e.stopImmediatePropagation();
@@ -303,6 +331,10 @@ var ps;
                 }
                 else if (e.button === 2) {
                     this.isMiddleButtonDown = false;
+                }
+                for (var _i = 0, _a = this.mouseUpListeners; _i < _a.length; _i++) {
+                    var listener = _a[_i];
+                    listener(this.pos, e.button);
                 }
             };
             // Find out where an element is on the page
@@ -404,14 +436,14 @@ var ps;
             this.coordConverter = coordConverter;
             this.backgroundColor = "black";
         }
-        Camera.prototype.fillCircle = function (entity, radius, color) {
-            this.fillArc(entity, radius, 0, Math.PI * 2, false, color);
+        Camera.prototype.fillCircle = function (pos, radius, color) {
+            this.fillArc(pos, 0, radius, 0, Math.PI * 2, false, color);
         };
-        Camera.prototype.fillArc = function (entity, radius, startAngle, endAngle, counterClockWise, color) {
+        Camera.prototype.fillArc = function (pos, rotation, radius, startAngle, endAngle, counterClockWise, color) {
             var _this = this;
-            var centerCC = this.coordConverter.toCameraCoords(entity.pos);
+            var centerCC = this.coordConverter.toCameraCoords(pos);
             var scaledRadius = this.scale(radius);
-            this.paintWhileRotated(centerCC, entity.rotation, function () {
+            this.paintWhileRotated(centerCC, rotation, function () {
                 _this.ctx.fillStyle = color;
                 _this.ctx.beginPath();
                 _this.ctx.arc(0, 0, scaledRadius, startAngle, endAngle);
@@ -419,12 +451,12 @@ var ps;
                 _this.ctx.closePath();
             });
         };
-        Camera.prototype.fillRect = function (entity, width, height, color) {
+        Camera.prototype.fillRect = function (pos, rotation, width, height, color) {
             var _this = this;
-            var centerCC = this.coordConverter.toCameraCoords(entity.pos);
+            var centerCC = this.coordConverter.toCameraCoords(pos);
             var scaledHeight = this.scale(height);
             var scaledWidth = this.scale(width);
-            this.paintWhileRotated(centerCC, entity.rotation, function () {
+            this.paintWhileRotated(centerCC, rotation, function () {
                 _this.ctx.fillStyle = color;
                 _this.ctx.fillRect(-scaledWidth / 2.0, -scaledHeight / 2.0, scaledWidth, scaledHeight);
             });
@@ -444,13 +476,12 @@ var ps;
             this.ctx.strokeStyle = previousStroke;
             this.ctx.lineWidth = previousLineWidth;
         };
-        Camera.prototype.paintSprites = function (entity, sprites) {
-            var centerCC = this.coordConverter.toCameraCoords(entity.pos);
-            var scaledDiameter = this.scale(entity.radius) * 2;
-            var size = [scaledDiameter, scaledDiameter];
+        Camera.prototype.paintSprites = function (pos, rotation, size, sprites) {
+            var centerCC = this.coordConverter.toCameraCoords(pos);
+            var scaledSize = [this.scale(size[0]), this.scale(size[1])];
             for (var _i = 0, sprites_1 = sprites; _i < sprites_1.length; _i++) {
                 var sprite = sprites_1[_i];
-                this.paintSprite(sprite, centerCC, size, entity.rotation);
+                this.paintSprite(sprite, centerCC, scaledSize, rotation);
             }
         };
         Camera.prototype.paintSprite = function (sprite, pos, size, rotation) {
