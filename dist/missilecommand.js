@@ -125,11 +125,36 @@ var mc;
     mc.Flak = Flak;
 })(mc || (mc = {}));
 /// <reference path="piston-0.4.0.d.ts" />
-/// <reference path="missile.ts" />
-/// <reference path="flak.ts" />
 var mc;
 (function (mc) {
-    var dims = new ps.Vector(500, 500);
+    var City = (function (_super) {
+        __extends(City, _super);
+        function City(pos_x) {
+            _super.call(this, new ps.Point(pos_x, 0));
+            this.color = "#5EF6FF";
+            this.shieldColor = "blue";
+            this.radius = 50;
+        }
+        City.prototype.render = function (camera) {
+            camera.fillArc(this.pos, 0, this.radius, 0, Math.PI, true, this.color);
+            camera.ctx.strokeStyle = this.shieldColor;
+            camera.ctx.lineWidth = 3;
+            camera.ctx.stroke();
+        };
+        City.prototype.getGunPosition = function () {
+            return new ps.Point(this.pos.x, this.radius);
+        };
+        return City;
+    }(ps.Entity));
+    mc.City = City;
+})(mc || (mc = {}));
+/// <reference path="piston-0.4.0.d.ts" />
+/// <reference path="missile.ts" />
+/// <reference path="flak.ts" />
+/// <reference path="city.ts" />
+var mc;
+(function (mc) {
+    var dims = new ps.Vector(1000, 500);
     // create canvas
     var canvas = document.createElement("canvas");
     canvas.width = dims.x;
@@ -140,9 +165,19 @@ var mc;
     // make left mouse button shoot flak
     engine.mouse.addMouseDownEventListener(function (pos, button) {
         if (button === 0) {
-            engine.registerEntity(shoot(new ps.Point(dims.x / 2, 0), pos));
+            engine.registerEntity(shoot(getClosestCity(cities, pos), pos));
         }
     });
+    // create cities
+    var numberOfCities = 5;
+    var cities = [];
+    var spacing = dims.x / (numberOfCities + 1);
+    for (var i = 1; i < numberOfCities + 1; i++) {
+        console.log(i * spacing);
+        var city = new mc.City(i * spacing);
+        engine.registerEntity(city);
+        cities.push(city);
+    }
     // create incoming missiles
     setInterval(addMissile, 1000); //todo find a way to turn it off
     // start the game
@@ -157,5 +192,18 @@ var mc;
     }
     function createMissile(initial_x, target_x, speed) {
         return new mc.Missile(new ps.Point(initial_x, dims.y), new ps.Point(target_x, 0), speed, "red");
+    }
+    function getClosestCity(cities, pos) {
+        var closestCity;
+        var closestDistance = Number.MAX_VALUE;
+        for (var _i = 0, cities_1 = cities; _i < cities_1.length; _i++) {
+            var city = cities_1[_i];
+            var distance = city.getGunPosition().distanceTo(pos);
+            if (distance < closestDistance) {
+                closestCity = city;
+                closestDistance = distance;
+            }
+        }
+        return closestCity.getGunPosition();
     }
 })(mc || (mc = {}));
