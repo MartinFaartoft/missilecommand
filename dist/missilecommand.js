@@ -50,12 +50,34 @@ var mc;
         __extends(FlakExplosion, _super);
         function FlakExplosion(pos) {
             _super.call(this, pos);
-            this.radius = 30;
+            this.expandingTime = 1;
+            this.contractingTime = 1.5;
+            this.radius = 15;
             this.isCollisionDetectionEnabled = true;
-            this.destroyOnCollision = true;
+            this.destroyOnCollision = false;
         }
+        FlakExplosion.prototype.update = function (dt, dims) {
+            _super.prototype.update.call(this, dt, dims);
+            if (this.expandingTime < 0 && this.contractingTime < 0) {
+                this.destroyed = true;
+            }
+            this.expand(dt);
+            this.contract(dt);
+        };
         FlakExplosion.prototype.render = function (camera) {
             camera.fillCircle(this.pos, this.radius, "orange");
+        };
+        FlakExplosion.prototype.expand = function (dt) {
+            if (this.expandingTime > 0) {
+                this.expandingTime -= dt;
+                this.radius += .3;
+            }
+        };
+        FlakExplosion.prototype.contract = function (dt) {
+            if (this.expandingTime < 0 && this.contractingTime > 0) {
+                this.contractingTime -= dt;
+                this.radius = Math.max(0, this.radius - .3);
+            }
         };
         return FlakExplosion;
     }(ps.Entity));
