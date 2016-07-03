@@ -13,13 +13,15 @@ var mc;
             this.target = target;
             this.color = color;
             this.vel = new ps.Vector(target.x - pos.x, target.y - pos.y).unit().multiply(speed);
-            this.radius = 5;
+            this.radius = 8;
             this.initialPos = pos;
             this.isCollisionDetectionEnabled = true;
+            this.rotationSpeed = (Math.random() - .5) * 10;
+            this.sprites.push(new ps.Sprite(new ps.Point(0, 0), [90, 90], [0, 1, 2], 3, "assets/meteor.png"));
         }
         Missile.prototype.render = function (camera) {
             camera.drawLine(this.initialPos, this.pos, 1, this.color);
-            camera.fillCircle(this.pos, this.radius, this.color);
+            camera.paintSprites(this.pos, this.rotation, [this.radius * 2, this.radius * 2], this.sprites);
         };
         Missile.prototype.update = function (dt, dims) {
             _super.prototype.update.call(this, dt, dims);
@@ -40,7 +42,7 @@ var mc;
             }
         };
         return Missile;
-    }(ps.Entity));
+    }(ps.EntityWithSprites));
     mc.Missile = Missile;
 })(mc || (mc = {}));
 /// <reference path="piston-0.4.0.d.ts" />
@@ -265,6 +267,6 @@ var mc;
     document.body.appendChild(canvas);
     var engine = new ps.Engine(dims, canvas);
     var scene = new mc.Scene(engine, dims);
-    // start the game
+    engine.preloadResources("assets/meteor.png");
     engine.start();
 })(mc || (mc = {}));

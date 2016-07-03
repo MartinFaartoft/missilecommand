@@ -13,6 +13,6 @@ namespace mc {
     let engine = new ps.Engine(dims, canvas);
     let scene = new Scene(engine, dims);
 
-    // start the game
+    engine.preloadResources("assets/meteor.png");
     engine.start();
 }
