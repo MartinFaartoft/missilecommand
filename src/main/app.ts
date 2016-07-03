@@ -20,17 +20,20 @@ namespace mc {
     // make left mouse button shoot flak
     engine.mouse.addMouseDownEventListener((pos, button) => {
         if (button === 0) {
-            engine.registerEntity(shoot(getClosestCity(cities, pos), pos));
+            let city = getClosestCityWithFlak(cities, pos);
+            if (city) {
+                city.shoot(pos);
+            }
         }
     });
     
     // create cities
-    let numberOfCities = 5;
+    let numberOfCities = 3;
+    let flakCount = 5;
     let cities: City[] = [];
     let spacing = dims.x / (numberOfCities + 1); 
     for (let i = 1; i < numberOfCities + 1; i++) {
-        console.log(i * spacing);
-        let city = new City(i * spacing);
+        let city = new City(i * spacing, flakCount);
         engine.registerEntity(city);
         cities.push(city);
     }
@@ -40,10 +43,6 @@ namespace mc {
 
     // start the game
     engine.start();
-
-    function shoot(pos: ps.Point, target: ps.Point): Flak {
-        return new Flak(pos, target);
-    }
 
     function addMissile() {
         let speed = Math.floor(Math.random() * 10 + 30);
@@ -56,11 +55,11 @@ namespace mc {
         return new Missile(new ps.Point(initial_x, dims.y), new ps.Point(target_x, 0), speed, "red");
     }
 
-    function getClosestCity(cities: City[], pos: ps.Point): ps.Point {
+    function getClosestCityWithFlak(cities: City[], pos: ps.Point): City {
         let closestCity: City;
         let closestDistance = Number.MAX_VALUE;
 
-        for (let city of cities) {
+        for (let city of cities.filter(c => c.flakCount > 0)) {
             let distance = city.getGunPosition().distanceTo(pos);
             if (distance < closestDistance) {
                 closestCity = city;
@@ -68,6 +67,6 @@ namespace mc {
             }
         }
 
-        return closestCity.getGunPosition();
+        return closestCity;
     }
 }

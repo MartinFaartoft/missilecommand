@@ -129,17 +129,33 @@ var mc;
 (function (mc) {
     var City = (function (_super) {
         __extends(City, _super);
-        function City(pos_x) {
+        function City(pos_x, flakCount) {
             _super.call(this, new ps.Point(pos_x, 0));
+            this.flakCount = flakCount;
             this.color = "#5EF6FF";
             this.shieldColor = "blue";
+            this.outOfAmmoColor = "#FF6363";
             this.radius = 50;
         }
+        City.prototype.shoot = function (target) {
+            if (this.flakCount > 0) {
+                this.flakCount--;
+                this.engine.registerEntity(new mc.Flak(this.getGunPosition(), target));
+                if (this.flakCount === 0) {
+                    this.color = this.outOfAmmoColor;
+                }
+            }
+        };
         City.prototype.render = function (camera) {
             camera.fillArc(this.pos, 0, this.radius, 0, Math.PI, true, this.color);
             camera.ctx.strokeStyle = this.shieldColor;
             camera.ctx.lineWidth = 3;
             camera.ctx.stroke();
+            //render remaining flak
+            camera.ctx.fillStyle = "black";
+            camera.ctx.font = "20px arial";
+            var posCC = camera.coordConverter.toCameraCoords(this.pos);
+            camera.ctx.fillText(this.flakCount.toString(), posCC.x - 5, posCC.y - 5);
         };
         City.prototype.getGunPosition = function () {
             return new ps.Point(this.pos.x, this.radius);
@@ -165,16 +181,19 @@ var mc;
     // make left mouse button shoot flak
     engine.mouse.addMouseDownEventListener(function (pos, button) {
         if (button === 0) {
-            engine.registerEntity(shoot(getClosestCity(cities, pos), pos));
+            var city = getClosestCityWithFlak(cities, pos);
+            if (city) {
+                city.shoot(pos);
+            }
         }
     });
     // create cities
-    var numberOfCities = 5;
+    var numberOfCities = 3;
+    var flakCount = 5;
     var cities = [];
     var spacing = dims.x / (numberOfCities + 1);
     for (var i = 1; i < numberOfCities + 1; i++) {
-        console.log(i * spacing);
-        var city = new mc.City(i * spacing);
+        var city = new mc.City(i * spacing, flakCount);
         engine.registerEntity(city);
         cities.push(city);
     }
@@ -182,9 +201,6 @@ var mc;
     setInterval(addMissile, 1000); //todo find a way to turn it off
     // start the game
     engine.start();
-    function shoot(pos, target) {
-        return new mc.Flak(pos, target);
-    }
     function addMissile() {
         var speed = Math.floor(Math.random() * 10 + 30);
         var missile = createMissile(Math.random() * dims.x, Math.random() * dims.x, speed);
@@ -193,17 +209,17 @@ var mc;
     function createMissile(initial_x, target_x, speed) {
         return new mc.Missile(new ps.Point(initial_x, dims.y), new ps.Point(target_x, 0), speed, "red");
     }
-    function getClosestCity(cities, pos) {
+    function getClosestCityWithFlak(cities, pos) {
         var closestCity;
         var closestDistance = Number.MAX_VALUE;
-        for (var _i = 0, cities_1 = cities; _i < cities_1.length; _i++) {
-            var city = cities_1[_i];
+        for (var _i = 0, _a = cities.filter(function (c) { return c.flakCount > 0; }); _i < _a.length; _i++) {
+            var city = _a[_i];
             var distance = city.getGunPosition().distanceTo(pos);
             if (distance < closestDistance) {
                 closestCity = city;
                 closestDistance = distance;
             }
         }
-        return closestCity.getGunPosition();
+        return closestCity;
     }
 })(mc || (mc = {}));
