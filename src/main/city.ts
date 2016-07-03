@@ -1,14 +1,16 @@
 /// <reference path="piston-0.4.0.d.ts" />
+/// <reference path="scene.ts" />
 
 namespace mc {
     export class City extends ps.Entity {
         color: string = "#5EF6FF";
         shieldColor: string = "blue";
         outOfAmmoColor: string = "#FF6363";
-        constructor(pos_x: number, public flakCount: number) {
+        constructor(pos_x: number, public flakCount: number, public scene: Scene) {
             super(new ps.Point(pos_x, 0));
 
             this.radius = 50;
+            this.isCollisionDetectionEnabled = true;
         }
 
         shoot(target: ps.Point): void {
@@ -23,6 +25,18 @@ namespace mc {
         }
 
         render(camera: ps.Camera) {
+            if (this.scene.isGameOver()) {
+                let text = "GAME OVER";
+                let width = camera.ctx.measureText(text).width;
+                let x = (camera.dims.x - width) / 2.0;
+                let y = camera.dims.y / 2.0 + 50;
+                camera.ctx.font = "150px arial";
+                camera.ctx.fillStyle = "red";
+                camera.ctx.fillText("GAME OVER", x, y);
+
+                return;
+            }
+
             camera.fillArc(this.pos, 0, this.radius, 0, Math.PI, true, this.color);
             camera.ctx.strokeStyle = this.shieldColor;
             camera.ctx.lineWidth = 3;
@@ -37,6 +51,14 @@ namespace mc {
 
         getGunPosition(): ps.Point {
             return new ps.Point(this.pos.x, this.radius);
+        }
+
+        collideWith(other: ps.Entity) {
+            this.scene.removeCity(this);
+
+            if (!this.scene.isGameOver()) {
+                this.destroyed = true;
+            }
         }
     }
 }
