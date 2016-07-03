@@ -141,6 +141,7 @@ var mc;
             this.outOfAmmoColor = "#FF6363";
             this.radius = 50;
             this.isCollisionDetectionEnabled = true;
+            this.skyline = new ps.Sprite(new ps.Point(0, 0), [74, 38], [0], 0, "assets/skyline.png");
         }
         City.prototype.shoot = function (target) {
             if (this.flakCount > 0) {
@@ -162,15 +163,18 @@ var mc;
                 camera.ctx.fillText("GAME OVER", x, y);
                 return;
             }
+            //render shield and atmosphere
             camera.fillArc(this.pos, 0, this.radius, 0, Math.PI, true, this.color);
             camera.ctx.strokeStyle = this.shieldColor;
             camera.ctx.lineWidth = 3;
             camera.ctx.stroke();
+            //render skyline
+            camera.paintSprites(new ps.Point(this.pos.x, this.pos.y + 20), 0, [this.radius * 1.4, this.radius], [this.skyline]);
             //render remaining flak
             camera.ctx.fillStyle = "black";
-            camera.ctx.font = "20px arial";
+            camera.ctx.font = "30px arial";
             var posCC = camera.coordConverter.toCameraCoords(this.pos);
-            camera.ctx.fillText(this.flakCount.toString(), posCC.x - 5, posCC.y - 5);
+            camera.ctx.fillText(this.flakCount.toString(), posCC.x - 7, posCC.y - 5);
         };
         City.prototype.getGunPosition = function () {
             return new ps.Point(this.pos.x, this.radius);
@@ -267,6 +271,6 @@ var mc;
     document.body.appendChild(canvas);
     var engine = new ps.Engine(dims, canvas);
     var scene = new mc.Scene(engine, dims);
-    engine.preloadResources("assets/meteor.png");
+    engine.preloadResources("assets/meteor.png", "assets/skyline.png");
     engine.start();
 })(mc || (mc = {}));

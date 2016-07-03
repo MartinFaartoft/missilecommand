@@ -6,11 +6,14 @@ namespace mc {
         color: string = "#5EF6FF";
         shieldColor: string = "blue";
         outOfAmmoColor: string = "#FF6363";
+        skyline: ps.Sprite;
         constructor(pos_x: number, public flakCount: number, public scene: Scene) {
             super(new ps.Point(pos_x, 0));
 
             this.radius = 50;
             this.isCollisionDetectionEnabled = true;
+
+            this.skyline = new ps.Sprite(new ps.Point(0, 0), [74, 38], [0], 0, "assets/skyline.png")
         }
 
         shoot(target: ps.Point): void {
@@ -37,16 +40,20 @@ namespace mc {
                 return;
             }
 
+            //render shield and atmosphere
             camera.fillArc(this.pos, 0, this.radius, 0, Math.PI, true, this.color);
             camera.ctx.strokeStyle = this.shieldColor;
             camera.ctx.lineWidth = 3;
             camera.ctx.stroke();
+
+            //render skyline
+            camera.paintSprites(new ps.Point(this.pos.x, this.pos.y + 20), 0, [this.radius * 1.4, this.radius], [this.skyline]); 
             
             //render remaining flak
             camera.ctx.fillStyle = "black";
-            camera.ctx.font = "20px arial";
+            camera.ctx.font = "30px arial";
             let posCC = camera.coordConverter.toCameraCoords(this.pos);
-            camera.ctx.fillText(this.flakCount.toString(), posCC.x - 5, posCC.y - 5);
+            camera.ctx.fillText(this.flakCount.toString(), posCC.x - 7, posCC.y - 5);
         }
 
         getGunPosition(): ps.Point {
